@@ -13,14 +13,16 @@ defmodule Junior do
 
     parsed_document =
       get_html_doc(source)
-      |> parse
+      |> parse(source)
+      |> get_student_names(source)
+      |> get_student_grades(source)
 
     case parsed_document do
       {:ok, document} ->
         IO.inspect(document, label: "parsed document retrieved.....")
 
-      {:error, _} ->
-        IO.puts("no parsed document found.....")
+        #       {:error, err} ->
+        #         IO.puts("no parsed document found.....")
     end
   end
 
@@ -52,15 +54,10 @@ defmodule Junior do
   end
 
   defp get_html_doc(source) do
-    source_as_html =
-      source
-      |> String.split("/")
-      |> List.last()
-      |> String.replace_suffix(".pdf", ".html")
-      |> IO.inspect(label: "source_as_html")
+    filename = convert_filename(source, "pdf", "html")
 
     html_doc =
-      case File.read("#{@target_dir}/#{source_as_html}") do
+      case File.read("#{@target_dir}/#{filename}") do
         {:ok, file} ->
           file
 
@@ -68,14 +65,66 @@ defmodule Junior do
           nil
       end
 
-    html_doc
+    {:ok, html_doc}
   end
 
-  defp parse(nil) do
-    {:error, ""}
+  defp convert_filename(filename, from, to) do
+    converted =
+      filename
+      |> String.split("/")
+      |> List.last()
+      |> String.replace_suffix(".#{from}", ".#{to}")
+
+    converted
   end
 
-  defp parse(html) do
+  defp get_student_names({:ok, parsed_contents}, source) do
+    filename = convert_filename(source, "pdf", "txt")
+    IO.inspect(filename, label: "filename to write to")
+
+    student_names =
+      parsed_contents
+      |> Floki.find(".pf .pc .c.x7.yb.w4.h2")
+      |> Floki.text(sep: "|")
+      |> String.replace("|", "\n")
+      |> String.trim()
+
+    File.write!("#{@target_dir}/#{filename}", student_names, [:write])
+
+    {:ok, parsed_contents}
+  end
+
+  defp get_student_grades({:ok, parsed_contents}, _source) do
+    # sixth_grade_classes = ["SociaStGr6", "Science Gr 6", "English LA6", "Math, Grade 6"]
+
+    # seventh_grade_classes = [
+    #   "English Gr 7",
+    #   "Math 7 Adv",
+    #   "LifeSci Gr7",
+    #   "Citiz Gr 7",
+    #   "Geog Gr 7",
+    #   "Math Gr 7"
+    # ]
+
+    # class_target = ".w16.ha"
+    # grade_target = ".x20.w18"
+
+    # filename = convert_filename(source, "pdf", "txt")
+    # IO.inspect(filename, label: "filename to write to")
+
+    # student_names =
+    #   parsed_contents
+    #   |> Floki.find(".pf .pc .c.x7.yb.w4.h2")
+    #   |> Floki.text(sep: "|")
+    #   |> String.replace("|", "\n")
+    #   |> String.trim()
+
+    # File.write!("#{@target_dir}/#{filename}", student_names, [:append])
+
+    {:ok, parsed_contents}
+  end
+
+  defp parse({:ok, html_doc}, _source) do
     ProgressBar.render_spinner(
       [
         frames: :braille,
@@ -84,8 +133,8 @@ defmodule Junior do
         done: [IO.ANSI.green(), "✓", IO.ANSI.reset(), " Done Reading."]
       ],
       fn ->
-        document = Floki.parse(html)
-        {:ok, document}
+        parsed_contents = Floki.parse(html_doc)
+        {:ok, parsed_contents}
       end
     )
   end

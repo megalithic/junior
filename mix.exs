@@ -15,7 +15,7 @@ defmodule Junior.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger, :nimble_csv]
     ]
   end
 
@@ -27,6 +27,7 @@ defmodule Junior.MixProject do
       {:floki, "~> 0.20.0"},
       {:html5ever, "~> 0.7.0"},
       {:progress_bar, "~> 2.0.0"},
+      {:nimble_csv, "~> 0.3"}
     ]
   end
 end
