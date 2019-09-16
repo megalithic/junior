@@ -14,11 +14,18 @@ fi
 if command -v asdf >/dev/null 2>&1; then
   asdf plugin-add elixir https://github.com/asdf-vm/asdf-elixir.git || true
   asdf plugin-add erlang https://github.com/asdf-vm/asdf-erlang.git || true
+  asdf plugin-add rust https://github.com/code-lever/asdf-rust.git || true
   asdf install | bin/spinner
+fi
+
+if command -v rustup >/dev/null 2>&1; then
+  rustup install stable
+  rustup default stable
 fi
 
 mix deps.clean --all
 mix deps.get
 mix deps.compile
+
 mix local.hex --force --if-missing
 mix local.rebar --force

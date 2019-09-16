@@ -33,7 +33,7 @@ defmodule Junior do
           IO.inspect(@target_dir, label: "target dir created!")
 
         {:error, err} ->
-          IO.inspect(err, "oops! there was a problem")
+          IO.inspect(err, label: "oops! there was a problem")
       end
     end
 
@@ -84,7 +84,7 @@ defmodule Junior do
         done: [IO.ANSI.green(), "✓", IO.ANSI.reset(), " Done Reading."]
       ],
       fn ->
-        document = Meeseeks.parse(html)
+        document = Floki.parse(html)
         {:ok, document}
       end
     )

@@ -24,9 +24,9 @@ defmodule Junior.MixProject do
     [
       {:ex_cli, "~> 0.1.2"},
       {:pdf2htmlex, "~> 0.1"},
-      {:meeseeks, "~> 0.13.1"},
-      {:meeseeks_html5ever, "~> 0.12.1"},
-      {:progress_bar, "~> 2.0.0"}
+      {:floki, "~> 0.20.0"},
+      {:html5ever, "~> 0.7.0"},
+      {:progress_bar, "~> 2.0.0"},
     ]
   end
 end
