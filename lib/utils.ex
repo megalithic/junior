@@ -12,7 +12,17 @@ defmodule Junior.Utils do
   def get_classes(filename) do
     cond do
       filename =~ "6th grade" ->
-        {6, ["SociaStGr6", "Science Gr 6", "English LA6", "Math, Grade 6"]}
+        {6,
+         [
+           "SociaStGr6",
+           "Science Gr 6",
+           "English LA6",
+           "Math, Grade 6",
+           "AAS:SoSt-6",
+           "AAS:EngLA-6",
+           "AAS:Math-6",
+           "AAS:Sci-6"
+         ]}
 
       filename =~ "7th grade" ->
         {7,
@@ -22,7 +32,11 @@ defmodule Junior.Utils do
            "LifeSci Gr7",
            "Citiz Gr 7",
            "Geog Gr 7",
-           "Math Gr 7"
+           "Math Gr 7",
+           "AAS:SoSt-7",
+           "AAS:Math-7",
+           "AAS:EngLA-7",
+           "AAS:Sci-7"
          ]}
 
       true ->
