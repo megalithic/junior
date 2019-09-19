@@ -46,7 +46,7 @@ defmodule Junior.Page do
 
   defp set_grades(student, classes) do
     class_target = ".w16.ha"
-    grade_target = ".x20.w18"
+    grade_target = ".w18.hc"
 
     grades =
       Enum.map(classes, fn class ->
@@ -81,10 +81,7 @@ defmodule Junior.Page do
             grade =
               if class_grade_target == "",
                 do: 0,
-                else:
-                  class_grade_target
-                  |> Integer.parse()
-                  |> Kernel.elem(0)
+                else: class_grade_target |> Integer.parse() |> Kernel.elem(0)
 
             {found_class_target_text, grade}
           else
