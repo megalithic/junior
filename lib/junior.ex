@@ -5,21 +5,55 @@ defmodule Junior do
 
   import Pdf2htmlex
 
+  alias Junior.Page
+  alias Junior.Utils
+
   @home_dir System.get_env("HOME")
   @target_dir "#{@home_dir}/Downloads/tmp/junior"
 
-  def start(source) do
-    convert(source)
+  def start(source, should_clean) do
+    Page.start_link()
+
+    if should_clean do
+      clean(source)
+    end
+
+    convert_pdf_to_html(source)
+
+    write_column_headers(source)
 
     get_html_doc(source)
     |> parse(source)
     |> get_pages(source)
-    |> Enum.map(fn page ->
-      write_data(page, source)
+    |> Enum.each(fn page ->
+      Page.save_data(page, source)
+      |> write_data(source)
     end)
+
+    IO.puts("Students written to file: #{Enum.count(Page.get_students())}")
   end
 
-  def convert(source) do
+  def clean(source) do
+    ProgressBar.render_spinner(
+      [
+        frames: :braille,
+        text: "Cleaning Previously Stored Files…",
+        spinner_color: IO.ANSI.magenta(),
+        done: [IO.ANSI.green(), "✓", IO.ANSI.reset(), " Done Cleaning Previous Files."]
+      ],
+      fn ->
+        html_source_filename = Utils.convert_filename(source, "pdf", "html")
+        txt_target_filename = Utils.convert_filename(source, "pdf", "txt")
+        csv_target_filename = Utils.convert_filename(source, "pdf", "csv")
+
+        File.rm("#{@target_dir}/#{html_source_filename}")
+        File.rm("#{@target_dir}/#{txt_target_filename}")
+        File.rm("#{@target_dir}/#{csv_target_filename}")
+      end
+    )
+  end
+
+  def convert_pdf_to_html(source) do
     if not File.exists?(@target_dir) do
       case File.mkdir_p(@target_dir) do
         :ok ->
@@ -35,7 +69,7 @@ defmodule Junior do
         frames: :braille,
         text: "Converting PDF to HTML…",
         spinner_color: IO.ANSI.magenta(),
-        done: [IO.ANSI.green(), "✓", IO.ANSI.reset(), " Done Converting."]
+        done: [IO.ANSI.green(), "✓", IO.ANSI.reset(), " Done Converting PDF to HTML."]
       ],
       fn ->
         open(source)
@@ -45,7 +79,7 @@ defmodule Junior do
   end
 
   defp get_html_doc(source) do
-    filename = convert_filename(source, "pdf", "html")
+    filename = Utils.convert_filename(source, "pdf", "html")
 
     html_doc =
       case File.read("#{@target_dir}/#{filename}") do
@@ -65,7 +99,7 @@ defmodule Junior do
         frames: :braille,
         text: "Parsing HTML…",
         spinner_color: IO.ANSI.magenta(),
-        done: [IO.ANSI.green(), "✓", IO.ANSI.reset(), " Done Parsing."]
+        done: [IO.ANSI.green(), "✓", IO.ANSI.reset(), " Done Parsing HTML."]
       ],
       fn ->
         parsed_contents = Floki.parse(html_doc)
@@ -78,9 +112,9 @@ defmodule Junior do
     ProgressBar.render_spinner(
       [
         frames: :braille,
-        text: "Reading Pages…",
+        text: "Compiling Pages…",
         spinner_color: IO.ANSI.magenta(),
-        done: [IO.ANSI.green(), "✓", IO.ANSI.reset(), " Done Reading."]
+        done: [IO.ANSI.green(), "✓", IO.ANSI.reset(), " Done Compiling Pages."]
       ],
       fn ->
         pages =
@@ -92,141 +126,49 @@ defmodule Junior do
     )
   end
 
-  defp write_data(data, source) do
-    {"div", _attr, page} = data
-
+  defp write_column_headers(source) do
     ProgressBar.render_spinner(
       [
         frames: :braille,
-        text: "writing student data to file…",
+        text: "Writing Column Headers…",
         spinner_color: IO.ANSI.magenta(),
-        done: [IO.ANSI.green(), "✓", IO.ANSI.reset(), " Done Writing Data."]
+        done: [
+          IO.ANSI.green(),
+          "✓",
+          IO.ANSI.reset(),
+          " Done Writing Column Headers."
+        ]
       ],
       fn ->
-        filename = convert_filename(source, "pdf", "txt")
+        filename = Utils.convert_filename(source, "pdf", "csv")
 
-        page
-        |> find_and_write_name(filename)
-        |> find_and_write_grades(filename)
+        entry = "Last,First Middle,Year,Cumulative Grade\n"
+
+        File.write("#{@target_dir}/#{filename}", entry, [])
       end
     )
   end
 
-  defp find_and_write_name(page, filename) do
-    name_target = ".c.x7.yb.w4.h2"
-
-    name =
-      page
-      |> Floki.find(name_target)
-      |> Floki.text()
-      |> String.trim()
-      |> Kernel.<>("\t")
-
-    File.write("#{@target_dir}/#{filename}", name, [])
-
-    page
-  end
-
-  defp find_and_write_grades(page, filename) do
-    class_target = ".w16.ha"
-    grade_target = ".x20.w18"
-    _cumulative_grades = 0
-    grades = []
-    classes = get_classes(filename)
-
-    Enum.each(classes, fn class ->
-      found_class_target =
-        page
-        |> Floki.find(class_target)
-        |> Enum.filter(fn c -> Floki.text(c) == class end)
-        |> Enum.at(0)
-
-      found_class_target_text =
-        Floki.text(found_class_target)
-        |> IO.inspect(label: "found_class_target_text")
-
-      if found_class_target_text == class do
-        # TODO: take the `yxx` class pattern and find all that match; the last one in the html-tree list should be the grade
-        found_class_target_css =
-          Floki.attribute(found_class_target, "class")
-          |> Enum.at(0)
-          |> String.replace(" ", ".")
-          |> String.replace("c.", ".c.")
-
-        common_class =
-          Regex.run(~r/(.[y]\w+)/, found_class_target_css)
-          |> Enum.uniq()
-          |> Enum.at(0)
-          |> IO.inspect(label: "captured common_class regex")
-
-        class_grade_sibling_target =
-          "#{found_class_target_css} ~ #{grade_target <> common_class}"
-          |> IO.inspect(label: "class_grade_sibling_target")
-
-        class_grade_target =
-          Floki.find(page, class_grade_sibling_target)
-          |> Floki.text()
-          |> Integer.parse()
-          |> Kernel.elem(0)
-
-        IO.inspect(class_grade_target, label: "class_grade_target")
-
-        # grades = grades ++ Floki.text(class_grade_target)
-        # IO.inspect(grades, label: "grades we're updating.........")
-      end
-
-      #       if found_class == class do
-      #         class_grade =
-      #           page
-      #           |> Floki.find(grade_target)
-      #           |> Floki.text()
-      #           |> IO.inspect(label: "found class grade")
-
-      #         grades = grades ++ class_grade
-      #       end
-    end)
-
-    IO.inspect(grades, label: "total grades")
-
-    # grades =
-    #   page
-    #   |> Floki.find(name_target)
-    #   |> Floki.text()
-    #   |> String.trim()
-    #   |> Kernel.<>("\t")
-
-    # File.write("#{@target_dir}/#{filename}", cumulative_grades, [])
-
-    page
-  end
-
-  defp get_classes(filename) do
-    cond do
-      filename =~ "6th grade" ->
-        ["SociaStGr6", "Science Gr 6", "English LA6", "Math, Grade 6"]
-
-      filename =~ "7th grade" ->
-        [
-          "English Gr 7",
-          "Math 7 Adv",
-          "LifeSci Gr7",
-          "Citiz Gr 7",
-          "Geog Gr 7",
-          "Math Gr 7"
+  defp write_data(student, source) do
+    ProgressBar.render_spinner(
+      [
+        frames: :braille,
+        text: "Writing Student (#{student.name}) Data to File…",
+        spinner_color: IO.ANSI.magenta(),
+        done: [
+          IO.ANSI.green(),
+          "✓",
+          IO.ANSI.reset(),
+          " Done Writing Student (#{student.name}) Data."
         ]
+      ],
+      fn ->
+        filename = Utils.convert_filename(source, "pdf", "csv")
 
-      false ->
-        []
-    end
-  end
+        entry = "#{student.name},#{student.year},#{student.cumulative}\n"
 
-  defp convert_filename(filename, from, to) do
-    converted =
-      filename
-      |> String.split("/")
-      |> List.last()
-      |> String.replace_suffix(".#{from}", ".#{to}")
-
-    converted
+        File.write("#{@target_dir}/#{filename}", entry, [:append])
+      end
+    )
   end
 end

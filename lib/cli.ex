@@ -16,15 +16,11 @@ defmodule Junior.CLI do
     aliases([])
     description("Begins the grade extraction and calculation process..")
 
-    long_description("""
-    Begins the grade extraction and calculation process..
-    """)
-
     argument(:source)
+    option(:clean, type: :boolean, help: "Deletes previously stored files")
 
     run context do
-      IO.puts("Extracting and parsing grades..")
-      Junior.start(context.source)
+      Junior.start(context.source, context[:clean])
     end
   end
 end
