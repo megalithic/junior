@@ -15,9 +15,12 @@ defmodule Junior.Utils do
         {6,
          [
            "SociaStGr6",
+           "SocialStuGr6",
            "Science Gr 6",
            "English LA6",
+           "English LA 6",
            "Math, Grade 6",
+           "Math,Grade 6",
            "AAS:SoSt-6",
            "AAS:EngLA-6",
            "AAS:Math-6",
